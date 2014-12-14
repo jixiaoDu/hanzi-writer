@@ -6,7 +6,7 @@ class Mixable
 			@[key] = value
 
 		obj.extended?.apply(@)
-		this
+		return @
 
 	@include: (obj) ->
 		for key, value of obj when key not in moduleKeywords

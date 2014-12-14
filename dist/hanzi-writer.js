@@ -1,691 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-  };
-} else {
-  // old school shim for old browsers
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    var TempCtor = function () {}
-    TempCtor.prototype = superCtor.prototype
-    ctor.prototype = new TempCtor()
-    ctor.prototype.constructor = ctor
-  }
-}
-
-},{}],2:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],3:[function(require,module,exports){
-module.exports = function isBuffer(arg) {
-  return arg && typeof arg === 'object'
-    && typeof arg.copy === 'function'
-    && typeof arg.fill === 'function'
-    && typeof arg.readUInt8 === 'function';
-}
-},{}],4:[function(require,module,exports){
-(function (process,global){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var formatRegExp = /%[sdj%]/g;
-exports.format = function(f) {
-  if (!isString(f)) {
-    var objects = [];
-    for (var i = 0; i < arguments.length; i++) {
-      objects.push(inspect(arguments[i]));
-    }
-    return objects.join(' ');
-  }
-
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%%') return '%';
-    if (i >= len) return x;
-    switch (x) {
-      case '%s': return String(args[i++]);
-      case '%d': return Number(args[i++]);
-      case '%j':
-        try {
-          return JSON.stringify(args[i++]);
-        } catch (_) {
-          return '[Circular]';
-        }
-      default:
-        return x;
-    }
-  });
-  for (var x = args[i]; i < len; x = args[++i]) {
-    if (isNull(x) || !isObject(x)) {
-      str += ' ' + x;
-    } else {
-      str += ' ' + inspect(x);
-    }
-  }
-  return str;
-};
-
-
-// Mark that a method should not be used.
-// Returns a modified function which warns once by default.
-// If --no-deprecation is set, then it is a no-op.
-exports.deprecate = function(fn, msg) {
-  // Allow for deprecating things in the process of starting up.
-  if (isUndefined(global.process)) {
-    return function() {
-      return exports.deprecate(fn, msg).apply(this, arguments);
-    };
-  }
-
-  if (process.noDeprecation === true) {
-    return fn;
-  }
-
-  var warned = false;
-  function deprecated() {
-    if (!warned) {
-      if (process.throwDeprecation) {
-        throw new Error(msg);
-      } else if (process.traceDeprecation) {
-        console.trace(msg);
-      } else {
-        console.error(msg);
-      }
-      warned = true;
-    }
-    return fn.apply(this, arguments);
-  }
-
-  return deprecated;
-};
-
-
-var debugs = {};
-var debugEnviron;
-exports.debuglog = function(set) {
-  if (isUndefined(debugEnviron))
-    debugEnviron = process.env.NODE_DEBUG || '';
-  set = set.toUpperCase();
-  if (!debugs[set]) {
-    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
-      var pid = process.pid;
-      debugs[set] = function() {
-        var msg = exports.format.apply(exports, arguments);
-        console.error('%s %d: %s', set, pid, msg);
-      };
-    } else {
-      debugs[set] = function() {};
-    }
-  }
-  return debugs[set];
-};
-
-
-/**
- * Echos the value of a value. Trys to print the value out
- * in the best way possible given the different types.
- *
- * @param {Object} obj The object to print out.
- * @param {Object} opts Optional options object that alters the output.
- */
-/* legacy: obj, showHidden, depth, colors*/
-function inspect(obj, opts) {
-  // default options
-  var ctx = {
-    seen: [],
-    stylize: stylizeNoColor
-  };
-  // legacy...
-  if (arguments.length >= 3) ctx.depth = arguments[2];
-  if (arguments.length >= 4) ctx.colors = arguments[3];
-  if (isBoolean(opts)) {
-    // legacy...
-    ctx.showHidden = opts;
-  } else if (opts) {
-    // got an "options" object
-    exports._extend(ctx, opts);
-  }
-  // set default options
-  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-  if (isUndefined(ctx.depth)) ctx.depth = 2;
-  if (isUndefined(ctx.colors)) ctx.colors = false;
-  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-  if (ctx.colors) ctx.stylize = stylizeWithColor;
-  return formatValue(ctx, obj, ctx.depth);
-}
-exports.inspect = inspect;
-
-
-// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-inspect.colors = {
-  'bold' : [1, 22],
-  'italic' : [3, 23],
-  'underline' : [4, 24],
-  'inverse' : [7, 27],
-  'white' : [37, 39],
-  'grey' : [90, 39],
-  'black' : [30, 39],
-  'blue' : [34, 39],
-  'cyan' : [36, 39],
-  'green' : [32, 39],
-  'magenta' : [35, 39],
-  'red' : [31, 39],
-  'yellow' : [33, 39]
-};
-
-// Don't use 'blue' not visible on cmd.exe
-inspect.styles = {
-  'special': 'cyan',
-  'number': 'yellow',
-  'boolean': 'yellow',
-  'undefined': 'grey',
-  'null': 'bold',
-  'string': 'green',
-  'date': 'magenta',
-  // "name": intentionally not styling
-  'regexp': 'red'
-};
-
-
-function stylizeWithColor(str, styleType) {
-  var style = inspect.styles[styleType];
-
-  if (style) {
-    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-           '\u001b[' + inspect.colors[style][1] + 'm';
-  } else {
-    return str;
-  }
-}
-
-
-function stylizeNoColor(str, styleType) {
-  return str;
-}
-
-
-function arrayToHash(array) {
-  var hash = {};
-
-  array.forEach(function(val, idx) {
-    hash[val] = true;
-  });
-
-  return hash;
-}
-
-
-function formatValue(ctx, value, recurseTimes) {
-  // Provide a hook for user-specified inspect functions.
-  // Check that value is an object with an inspect function on it
-  if (ctx.customInspect &&
-      value &&
-      isFunction(value.inspect) &&
-      // Filter out the util module, it's inspect function is special
-      value.inspect !== exports.inspect &&
-      // Also filter out any prototype objects using the circular check.
-      !(value.constructor && value.constructor.prototype === value)) {
-    var ret = value.inspect(recurseTimes, ctx);
-    if (!isString(ret)) {
-      ret = formatValue(ctx, ret, recurseTimes);
-    }
-    return ret;
-  }
-
-  // Primitive types cannot have properties
-  var primitive = formatPrimitive(ctx, value);
-  if (primitive) {
-    return primitive;
-  }
-
-  // Look up the keys of the object.
-  var keys = Object.keys(value);
-  var visibleKeys = arrayToHash(keys);
-
-  if (ctx.showHidden) {
-    keys = Object.getOwnPropertyNames(value);
-  }
-
-  // IE doesn't make error fields non-enumerable
-  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
-  if (isError(value)
-      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
-    return formatError(value);
-  }
-
-  // Some type of object without properties can be shortcutted.
-  if (keys.length === 0) {
-    if (isFunction(value)) {
-      var name = value.name ? ': ' + value.name : '';
-      return ctx.stylize('[Function' + name + ']', 'special');
-    }
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    }
-    if (isDate(value)) {
-      return ctx.stylize(Date.prototype.toString.call(value), 'date');
-    }
-    if (isError(value)) {
-      return formatError(value);
-    }
-  }
-
-  var base = '', array = false, braces = ['{', '}'];
-
-  // Make Array say that they are Array
-  if (isArray(value)) {
-    array = true;
-    braces = ['[', ']'];
-  }
-
-  // Make functions say that they are functions
-  if (isFunction(value)) {
-    var n = value.name ? ': ' + value.name : '';
-    base = ' [Function' + n + ']';
-  }
-
-  // Make RegExps say that they are RegExps
-  if (isRegExp(value)) {
-    base = ' ' + RegExp.prototype.toString.call(value);
-  }
-
-  // Make dates with properties first say the date
-  if (isDate(value)) {
-    base = ' ' + Date.prototype.toUTCString.call(value);
-  }
-
-  // Make error with message first say the error
-  if (isError(value)) {
-    base = ' ' + formatError(value);
-  }
-
-  if (keys.length === 0 && (!array || value.length == 0)) {
-    return braces[0] + base + braces[1];
-  }
-
-  if (recurseTimes < 0) {
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    } else {
-      return ctx.stylize('[Object]', 'special');
-    }
-  }
-
-  ctx.seen.push(value);
-
-  var output;
-  if (array) {
-    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-  } else {
-    output = keys.map(function(key) {
-      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-    });
-  }
-
-  ctx.seen.pop();
-
-  return reduceToSingleString(output, base, braces);
-}
-
-
-function formatPrimitive(ctx, value) {
-  if (isUndefined(value))
-    return ctx.stylize('undefined', 'undefined');
-  if (isString(value)) {
-    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                             .replace(/'/g, "\\'")
-                                             .replace(/\\"/g, '"') + '\'';
-    return ctx.stylize(simple, 'string');
-  }
-  if (isNumber(value))
-    return ctx.stylize('' + value, 'number');
-  if (isBoolean(value))
-    return ctx.stylize('' + value, 'boolean');
-  // For some reason typeof null is "object", so special case here.
-  if (isNull(value))
-    return ctx.stylize('null', 'null');
-}
-
-
-function formatError(value) {
-  return '[' + Error.prototype.toString.call(value) + ']';
-}
-
-
-function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-  var output = [];
-  for (var i = 0, l = value.length; i < l; ++i) {
-    if (hasOwnProperty(value, String(i))) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          String(i), true));
-    } else {
-      output.push('');
-    }
-  }
-  keys.forEach(function(key) {
-    if (!key.match(/^\d+$/)) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          key, true));
-    }
-  });
-  return output;
-}
-
-
-function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-  var name, str, desc;
-  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-  if (desc.get) {
-    if (desc.set) {
-      str = ctx.stylize('[Getter/Setter]', 'special');
-    } else {
-      str = ctx.stylize('[Getter]', 'special');
-    }
-  } else {
-    if (desc.set) {
-      str = ctx.stylize('[Setter]', 'special');
-    }
-  }
-  if (!hasOwnProperty(visibleKeys, key)) {
-    name = '[' + key + ']';
-  }
-  if (!str) {
-    if (ctx.seen.indexOf(desc.value) < 0) {
-      if (isNull(recurseTimes)) {
-        str = formatValue(ctx, desc.value, null);
-      } else {
-        str = formatValue(ctx, desc.value, recurseTimes - 1);
-      }
-      if (str.indexOf('\n') > -1) {
-        if (array) {
-          str = str.split('\n').map(function(line) {
-            return '  ' + line;
-          }).join('\n').substr(2);
-        } else {
-          str = '\n' + str.split('\n').map(function(line) {
-            return '   ' + line;
-          }).join('\n');
-        }
-      }
-    } else {
-      str = ctx.stylize('[Circular]', 'special');
-    }
-  }
-  if (isUndefined(name)) {
-    if (array && key.match(/^\d+$/)) {
-      return str;
-    }
-    name = JSON.stringify('' + key);
-    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-      name = name.substr(1, name.length - 2);
-      name = ctx.stylize(name, 'name');
-    } else {
-      name = name.replace(/'/g, "\\'")
-                 .replace(/\\"/g, '"')
-                 .replace(/(^"|"$)/g, "'");
-      name = ctx.stylize(name, 'string');
-    }
-  }
-
-  return name + ': ' + str;
-}
-
-
-function reduceToSingleString(output, base, braces) {
-  var numLinesEst = 0;
-  var length = output.reduce(function(prev, cur) {
-    numLinesEst++;
-    if (cur.indexOf('\n') >= 0) numLinesEst++;
-    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
-  }, 0);
-
-  if (length > 60) {
-    return braces[0] +
-           (base === '' ? '' : base + '\n ') +
-           ' ' +
-           output.join(',\n  ') +
-           ' ' +
-           braces[1];
-  }
-
-  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-}
-
-
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-function isArray(ar) {
-  return Array.isArray(ar);
-}
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
-}
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
-}
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
-}
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
-}
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
-}
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return isObject(re) && objectToString(re) === '[object RegExp]';
-}
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-exports.isObject = isObject;
-
-function isDate(d) {
-  return isObject(d) && objectToString(d) === '[object Date]';
-}
-exports.isDate = isDate;
-
-function isError(e) {
-  return isObject(e) &&
-      (objectToString(e) === '[object Error]' || e instanceof Error);
-}
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = require('./support/isBuffer');
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
-}
-
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-
-// 26 Feb 16:19:34
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-
-// log is just a thin wrapper to console.log that prepends a timestamp
-exports.log = function() {
-  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
-};
-
-
-/**
- * Inherit the prototype methods from one constructor into another.
- *
- * The Function.prototype.inherits from lang.js rewritten as a standalone
- * function (not on Function.prototype). NOTE: If this file is to be loaded
- * during bootstrapping this function needs to be rewritten using some native
- * functions as prototype setup using normal JavaScript does not work as
- * expected during bootstrapping (see mirror.js in r114903).
- *
- * @param {function} ctor Constructor function which needs to inherit the
- *     prototype.
- * @param {function} superCtor Constructor function to inherit prototype from.
- */
-exports.inherits = require('inherits');
-
-exports._extend = function(origin, add) {
-  // Don't do anything if add isn't an object
-  if (!add || !isObject(add)) return origin;
-
-  var keys = Object.keys(add);
-  var i = keys.length;
-  while (i--) {
-    origin[keys[i]] = add[keys[i]];
-  }
-  return origin;
-};
-
-function hasOwnProperty(obj, prop) {
-  return Object.prototype.hasOwnProperty.call(obj, prop);
-}
-
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":3,"_process":2,"inherits":1}],5:[function(require,module,exports){
 /* svg.js 1.0.1 - svg selector inventor polyfill regex default color array pointarray patharray number viewbox bbox rbox element parent container fx relative event defs group arrange mask clip gradient pattern doc shape symbol use rect ellipse line poly path image text textpath nested hyperlink marker sugar set data memory loader helpers - svgjs.com/license */
 ;(function(root, factory) {
   if (typeof define === 'function' && define.amd) {
@@ -4579,7 +3892,7 @@ function hasOwnProperty(obj, prop) {
   return SVG
 }));
 
-},{}],6:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 var Character, ComboStroke, Drawable, Stroke,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -4775,7 +4088,7 @@ module.exports = Character;
 
 
 
-},{"./ComboStroke.coffee":8,"./Drawable.coffee":9,"./Stroke.coffee":12}],7:[function(require,module,exports){
+},{"./ComboStroke.coffee":4,"./Drawable.coffee":5,"./Stroke.coffee":8}],3:[function(require,module,exports){
 var CharacterPositioner, Drawable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -4859,7 +4172,7 @@ module.exports = CharacterPositioner;
 
 
 
-},{"./Drawable.coffee":9}],8:[function(require,module,exports){
+},{"./Drawable.coffee":5}],4:[function(require,module,exports){
 var ComboStroke, Drawable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5025,7 +4338,7 @@ module.exports = ComboStroke;
 
 
 
-},{"./Drawable.coffee":9}],9:[function(require,module,exports){
+},{"./Drawable.coffee":5}],5:[function(require,module,exports){
 var Drawable;
 
 Drawable = (function() {
@@ -5084,47 +4397,23 @@ module.exports = Drawable;
 
 
 
-},{}],10:[function(require,module,exports){
-var Character, CharacterPositioner, HanziWriter, SVG, UserStroke, extend, previousHanziWriter,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+},{}],6:[function(require,module,exports){
+var BoundsTransformer, CharacterPositionerView, HanziWriter, RenderOptions, SVG, ZdtCharacterBuilder, previousHanziWriter;
 
-Character = require('./Character.coffee');
+ZdtCharacterBuilder = require('./lib/ZdtCharacterBuilder.coffee');
 
-UserStroke = require('./UserStroke.coffee');
+BoundsTransformer = require('./lib/BoundsTransformer.coffee');
 
-CharacterPositioner = require('./CharacterPositioner.coffee');
+CharacterPositionerView = require('./views/CharacterPositionerView.coffee');
+
+RenderOptions = require('./models/RenderOptions.coffee');
 
 SVG = require('svg.js');
-
-extend = require('util')._extend;
 
 HanziWriter = (function() {
   HanziWriter.prototype.options = {
     charDataLoader: function(char) {
       return hanziData[char];
-    },
-    width: null,
-    height: null,
-    padding: 20,
-    strokeAnimationDuration: 300,
-    strokeHighlightDuration: 500,
-    strokeHighlightColor: '#AAF',
-    userStrokeFadeDuration: 300,
-    delayBetweenStrokes: 1000,
-    userStrokeAttrs: {
-      fill: 'none',
-      stroke: '#333',
-      'stroke-width': 4
-    },
-    strokeAttrs: {
-      fill: '#555',
-      stroke: '#555',
-      'stroke-width': 2
-    },
-    hintAttrs: {
-      fill: '#DDD',
-      stroke: '#DDD',
-      'stroke-width': 2
     }
   };
 
@@ -5138,177 +4427,20 @@ HanziWriter = (function() {
       value = options[key];
       this.options[key] = value;
     }
+    this.renderOptions = new RenderOptions({
+      width: options.width || 400,
+      height: options.height || 400,
+      padding: options.padding || 20
+    });
     this.setCharacter(character);
-    this.setupListeners();
-    this.hint.draw();
-    this.character.draw();
   }
-
-  HanziWriter.prototype.showCharacter = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.character.show(animationOptions);
-  };
-
-  HanziWriter.prototype.hideCharacter = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.character.hide(animationOptions);
-  };
-
-  HanziWriter.prototype.animateCharacter = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.character.animate();
-  };
-
-  HanziWriter.prototype.showHint = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.hint.show(animationOptions);
-  };
-
-  HanziWriter.prototype.hideHint = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.hint.hide(animationOptions);
-  };
-
-  HanziWriter.prototype.quiz = function(quizOptions) {
-    if (quizOptions == null) {
-      quizOptions = {};
-    }
-    this.isQuizzing = true;
-    this.hideCharacter(quizOptions);
-    if (quizOptions.showHint) {
-      this.showHint();
-    } else {
-      this.hideHint();
-    }
-    this.enforceStrokeOrder = quizOptions.enforceStrokeOrder;
-    this.currentStrokeIndex = 0;
-    this.numRecentMistakes = 0;
-    return this.drawnStrokes = [];
-  };
 
   HanziWriter.prototype.setCharacter = function(char) {
     var pathStrings;
     pathStrings = this.options.charDataLoader(char);
-    this.character = new Character(pathStrings, this.options);
-    this.hint = new Character(pathStrings, this.getHintOptions());
-    this.positioner = new CharacterPositioner(this.character, this.options);
-    this.hintPositioner = new CharacterPositioner(this.hint, this.options);
-    this.hintPositioner.setCanvas(this.svg);
-    return this.positioner.setCanvas(this.svg);
-  };
-
-  HanziWriter.prototype.setupListeners = function() {
-    this.svg.node.addEventListener('mousedown', (function(_this) {
-      return function(e) {
-        e.preventDefault();
-        return _this.startUserStroke(_this.getMousePoint(e));
-      };
-    })(this));
-    this.svg.node.addEventListener('touchstart', (function(_this) {
-      return function(e) {
-        e.preventDefault();
-        return _this.startUserStroke(_this.getTouchPoint(e));
-      };
-    })(this));
-    this.svg.node.addEventListener('mousemove', (function(_this) {
-      return function(e) {
-        e.preventDefault();
-        return _this.continueUserStroke(_this.getMousePoint(e));
-      };
-    })(this));
-    this.svg.node.addEventListener('touchmove', (function(_this) {
-      return function(e) {
-        e.preventDefault();
-        return _this.continueUserStroke(_this.getTouchPoint(e));
-      };
-    })(this));
-    document.addEventListener('mouseup', (function(_this) {
-      return function(e) {
-        return _this.endUserStroke();
-      };
-    })(this));
-    return document.addEventListener('touchend', (function(_this) {
-      return function(e) {
-        return _this.endUserStroke();
-      };
-    })(this));
-  };
-
-  HanziWriter.prototype.startUserStroke = function(point) {
-    this.point = point;
-    if (this.userStroke) {
-      return this.endUserStroke();
-    }
-    this.userStroke = new UserStroke(point, this.options);
-    this.userStroke.setCanvas(this.svg);
-    window.lastUserStroke = this.userStroke;
-    return this.userStroke.draw();
-  };
-
-  HanziWriter.prototype.continueUserStroke = function(point) {
-    if (this.userStroke) {
-      return this.userStroke.appendPoint(point);
-    }
-  };
-
-  HanziWriter.prototype.endUserStroke = function() {
-    var isValidStroke, matchingStroke, translatedPoints;
-    if (!this.userStroke) {
-      return;
-    }
-    translatedPoints = this.positioner.convertExternalPoints(this.userStroke.getPoints());
-    matchingStroke = this.character.getMatchingStroke(translatedPoints);
-    this.userStroke.fadeAndRemove();
-    this.userStroke = null;
-    if (!this.isQuizzing) {
-      return;
-    }
-    isValidStroke = matchingStroke && __indexOf.call(this.drawnStrokes, matchingStroke) < 0;
-    if (isValidStroke && (!this.enforceStrokeOrder || matchingStroke === this.character.getStroke(this.currentStrokeIndex))) {
-      this.drawnStrokes.push(matchingStroke);
-      this.currentStrokeIndex += 1;
-      this.numRecentMistakes = 0;
-      matchingStroke.show();
-      if (this.drawnStrokes.length === this.character.getNumStrokes()) {
-        return this.isQuizzing = false;
-      }
-    } else {
-      this.numRecentMistakes += 1;
-      if (this.numRecentMistakes > 3) {
-        return this.character.getStroke(this.currentStrokeIndex).highlight();
-      }
-    }
-  };
-
-  HanziWriter.prototype.getMousePoint = function(evt) {
-    return {
-      x: evt.offsetX,
-      y: evt.offsetY
-    };
-  };
-
-  HanziWriter.prototype.getTouchPoint = function(evt) {
-    return {
-      x: evt.touches[0].pageX - this.svg.node.offsetLeft,
-      y: evt.touches[0].pageY - this.svg.node.offsetTop
-    };
-  };
-
-  HanziWriter.prototype.getHintOptions = function() {
-    var hintOptions;
-    hintOptions = extend({}, this.options);
-    hintOptions.strokeAttrs = this.options.hintAttrs;
-    return hintOptions;
+    this.character = (new ZdtCharacterBuilder).buildCharacter(pathStrings);
+    this.boundsTransformer = new BoundsTransformer(this.character.getBounds(), this.renderOptions);
+    return this.characterPositionerView = new CharacterPositionerView(this.svg, this.character, this.boundsTransformer);
   };
 
   return HanziWriter;
@@ -5330,7 +4462,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
 
-},{"./Character.coffee":6,"./CharacterPositioner.coffee":7,"./UserStroke.coffee":13,"svg.js":5,"util":4}],11:[function(require,module,exports){
+},{"./lib/BoundsTransformer.coffee":11,"./lib/ZdtCharacterBuilder.coffee":13,"./models/RenderOptions.coffee":18,"./views/CharacterPositionerView.coffee":26,"svg.js":1}],7:[function(require,module,exports){
 var Drawable, Path,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5391,7 +4523,7 @@ module.exports = Path;
 
 
 
-},{"./Drawable.coffee":9}],12:[function(require,module,exports){
+},{"./Drawable.coffee":5}],8:[function(require,module,exports){
 var Path, Stroke,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5596,7 +4728,7 @@ module.exports = Stroke;
 
 
 
-},{"./Path.coffee":11}],13:[function(require,module,exports){
+},{"./Path.coffee":7}],9:[function(require,module,exports){
 var Path, UserStroke,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5645,4 +4777,795 @@ module.exports = UserStroke;
 
 
 
-},{"./Path.coffee":11}]},{},[6,7,8,9,10,11,12,13]);
+},{"./Path.coffee":7}],10:[function(require,module,exports){
+var StrokeConstants;
+
+module.exports = StrokeConstants = {
+  HORIZONTAL_STROKE: 1,
+  BACK_SLASH_STROKE: 2,
+  VERTICAL_STROKE: 3,
+  FORWARD_SLASH_STROKE: 4,
+  REVERSE_HORIZONTAL_STROKE: 5,
+  REVERSE_BACK_SLASH_STROKE: 6,
+  REVERSE_VERTICAL_STROKE: 7,
+  REVERSE_FORWARD_SLASH_STROKE: 8
+};
+
+
+
+},{}],11:[function(require,module,exports){
+var BoundsTransformer;
+
+BoundsTransformer = (function() {
+  function BoundsTransformer(bounds, renderOptions) {
+    this.bounds = bounds;
+    this.renderOptions = renderOptions;
+    this._calculateScaleAndOffset();
+  }
+
+  BoundsTransformer.prototype.getXOffset = function() {
+    return this.xOffset;
+  };
+
+  BoundsTransformer.prototype.getYOffset = function() {
+    return this.yOffset;
+  };
+
+  BoundsTransformer.prototype.getScale = function() {
+    return this.scale;
+  };
+
+  BoundsTransformer.prototype.convertExternalPoints = function(points) {
+    var point, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = points.length; _i < _len; _i++) {
+      point = points[_i];
+      _results.push(this.convertExternalPoint(point));
+    }
+    return _results;
+  };
+
+  BoundsTransformer.prototype.convertExternalPoint = function(point) {
+    return new Point({
+      x: (point.get('x') - this.xOffset) / this.scale,
+      y: (point.get('y') - this.yOffset) / this.scale
+    });
+  };
+
+  BoundsTransformer.prototype._calculateScaleAndOffset = function() {
+    var effectiveHeight, effectiveWidth, preScaledHeight, preScaledWidth, scaleX, scaleY, xCenteringBuffer, yCenteringBuffer;
+    preScaledWidth = this.bounds[1].get('x') - this.bounds[0].get('x');
+    preScaledHeight = this.bounds[1].get('y') - this.bounds[0].get('y');
+    effectiveWidth = this.renderOptions.get('width') - 2 * this.renderOptions.get('padding');
+    effectiveHeight = this.renderOptions.get('height') - 2 * this.renderOptions.get('padding');
+    scaleX = effectiveWidth / preScaledWidth;
+    scaleY = effectiveHeight / preScaledHeight;
+    this.scale = Math.min(scaleX, scaleY);
+    xCenteringBuffer = this.renderOptions.get('padding') + (effectiveWidth - this.scale * preScaledWidth) / 2;
+    yCenteringBuffer = this.renderOptions.get('padding') + (effectiveHeight - this.scale * preScaledHeight) / 2;
+    this.xOffset = -1 * this.bounds[0].get('x') * this.scale + xCenteringBuffer;
+    return this.yOffset = -1 * this.bounds[0].get('y') * this.scale + yCenteringBuffer;
+  };
+
+  return BoundsTransformer;
+
+})();
+
+module.exports = BoundsTransformer;
+
+
+
+},{}],12:[function(require,module,exports){
+var PathRenderer;
+
+PathRenderer = (function() {
+  function PathRenderer(points) {
+    var point, remainingPoints, start, _i, _len;
+    start = points[0];
+    remainingPoints = points.slice(1);
+    this.pathString = "M " + (start.get('x')) + " " + (start.get('y'));
+    for (_i = 0, _len = remainingPoints.length; _i < _len; _i++) {
+      point = remainingPoints[_i];
+      this.pathString += " L " + (point.get('x')) + " " + (point.get('y'));
+    }
+  }
+
+  PathRenderer.prototype.getPathString = function(close) {
+    if (close == null) {
+      close = false;
+    }
+    if (close) {
+      return this.pathString + ' z';
+    } else {
+      return this.pathString;
+    }
+  };
+
+  return PathRenderer;
+
+})();
+
+module.exports = PathRenderer;
+
+
+
+},{}],13:[function(require,module,exports){
+var Character, ComboStroke, Point, Stroke, ZdtCharacterBuilder;
+
+Point = require('../models/Point.coffee');
+
+Stroke = require('../models/Stroke.coffee');
+
+ComboStroke = require('../models/ComboStroke.coffee');
+
+Character = require('../models/Character.coffee');
+
+ZdtCharacterBuilder = (function() {
+  function ZdtCharacterBuilder() {}
+
+  ZdtCharacterBuilder.prototype.buildCharacter = function(zdtPathStrings) {
+    var comboStroke, comboStrokeDataBuffer, partialStrokes, pathString, rawStrokeData, strokeData, strokes, _i, _len;
+    rawStrokeData = (function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = zdtPathStrings.length; _i < _len; _i++) {
+        pathString = zdtPathStrings[_i];
+        _results.push(this._parsePathString(pathString));
+      }
+      return _results;
+    }).call(this);
+    comboStrokeDataBuffer = [];
+    strokes = [];
+    for (_i = 0, _len = rawStrokeData.length; _i < _len; _i++) {
+      strokeData = rawStrokeData[_i];
+      if (strokeData.isComplete && comboStrokeDataBuffer.length === 0) {
+        strokes.push(new Stroke(strokeData));
+      } else if (strokeData.isComplete) {
+        comboStrokeDataBuffer.push(strokeData);
+        partialStrokes = (function() {
+          var _j, _len1, _results;
+          _results = [];
+          for (_j = 0, _len1 = comboStrokeDataBuffer.length; _j < _len1; _j++) {
+            strokeData = comboStrokeDataBuffer[_j];
+            strokeData.animationSpeedup = comboStrokeDataBuffer.length;
+            _results.push(new Stroke(strokeData));
+          }
+          return _results;
+        })();
+        comboStroke = new ComboStroke({
+          strokes: partialStrokes
+        });
+        strokes.push(comboStroke);
+        comboStrokeDataBuffer = [];
+      } else {
+        comboStrokeDataBuffer.push(strokeData);
+      }
+    }
+    return new Character({
+      strokes: strokes
+    });
+  };
+
+  ZdtCharacterBuilder.prototype._parsePathString = function(pathString) {
+    var metadataString, pointString, strokeData, _ref;
+    _ref = pathString.split(':'), metadataString = _ref[0], pathString = _ref[1];
+    pathString = pathString.replace(/;?\s*$/, '');
+    strokeData = {
+      points: (function() {
+        var _i, _len, _ref1, _results;
+        _ref1 = pathString.split(';');
+        _results = [];
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          pointString = _ref1[_i];
+          _results.push(this._parsePoint(pointString));
+        }
+        return _results;
+      }).call(this),
+      isComplete: metadataString[2] === 'P',
+      strokeType: parseInt(metadataString[1]),
+      animationSpeedup: 1
+    };
+    return strokeData;
+  };
+
+  ZdtCharacterBuilder.prototype._parsePoint = function(pointString) {
+    var pointArr;
+    pointArr = pointString.split(',');
+    return new Point({
+      x: pointArr[0],
+      y: pointArr[1]
+    });
+  };
+
+  return ZdtCharacterBuilder;
+
+})();
+
+module.exports = ZdtCharacterBuilder;
+
+
+
+},{"../models/Character.coffee":14,"../models/ComboStroke.coffee":15,"../models/Point.coffee":17,"../models/Stroke.coffee":19}],14:[function(require,module,exports){
+var Character, Model, StrokeCollectionMixin,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+StrokeCollectionMixin = require('./mixins/StrokeCollectionMixin.coffee');
+
+Character = (function(_super) {
+  __extends(Character, _super);
+
+  function Character() {
+    return Character.__super__.constructor.apply(this, arguments);
+  }
+
+  Character.include(StrokeCollectionMixin);
+
+  Character.prototype.defaults = {
+    strokes: [],
+    isVisible: true,
+    isOutlineVisible: true
+  };
+
+  return Character;
+
+})(Model);
+
+module.exports = Character;
+
+
+
+},{"./Model.coffee":16,"./mixins/StrokeCollectionMixin.coffee":22}],15:[function(require,module,exports){
+var ComboStroke, Model, StrokeCollectionMixin,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+StrokeCollectionMixin = require('./mixins/StrokeCollectionMixin.coffee');
+
+ComboStroke = (function(_super) {
+  __extends(ComboStroke, _super);
+
+  function ComboStroke() {
+    return ComboStroke.__super__.constructor.apply(this, arguments);
+  }
+
+  ComboStroke.include(StrokeCollectionMixin);
+
+  ComboStroke.prototype.defaults = {
+    strokes: []
+  };
+
+  return ComboStroke;
+
+})(Model);
+
+module.exports = ComboStroke;
+
+
+
+},{"./Model.coffee":16,"./mixins/StrokeCollectionMixin.coffee":22}],16:[function(require,module,exports){
+var Mixable, Model,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Mixable = require('../utils/Mixable.coffee');
+
+Model = (function(_super) {
+  __extends(Model, _super);
+
+  Model.prototype.defaults = {};
+
+  function Model(properties) {
+    this.properties = properties;
+  }
+
+  Model.prototype.get = function(key) {
+    if (key in this.properties) {
+      return this.properties[key];
+    } else {
+      return defaults[key];
+    }
+  };
+
+  Model.prototype.set = function() {
+    var key, value, _ref;
+    if (arguments.length === 1) {
+      _ref = arguments[0];
+      for (key in _ref) {
+        value = _ref[key];
+        this.properties[key] = value;
+      }
+    } else {
+      this.properties[arguments[0]] = arguments[1];
+    }
+    return this;
+  };
+
+  return Model;
+
+})(Mixable);
+
+module.exports = Model;
+
+
+
+},{"../utils/Mixable.coffee":23}],17:[function(require,module,exports){
+var Model, Point,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+Point = (function(_super) {
+  __extends(Point, _super);
+
+  function Point() {
+    return Point.__super__.constructor.apply(this, arguments);
+  }
+
+  Point.prototype.defaults = {
+    x: 0,
+    y: 0
+  };
+
+  return Point;
+
+})(Model);
+
+module.exports = Point;
+
+
+
+},{"./Model.coffee":16}],18:[function(require,module,exports){
+var Model, RenderOptions,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+RenderOptions = (function(_super) {
+  __extends(RenderOptions, _super);
+
+  function RenderOptions() {
+    return RenderOptions.__super__.constructor.apply(this, arguments);
+  }
+
+  RenderOptions.prototype.defaults = {
+    width: 400,
+    height: 400,
+    padding: 20
+  };
+
+  return RenderOptions;
+
+})(Model);
+
+module.exports = RenderOptions;
+
+
+
+},{"./Model.coffee":16}],19:[function(require,module,exports){
+var Model, PointCollectionMixin, Stroke,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+PointCollectionMixin = require('./mixins/PointCollectionMixin.coffee');
+
+Stroke = (function(_super) {
+  __extends(Stroke, _super);
+
+  function Stroke() {
+    return Stroke.__super__.constructor.apply(this, arguments);
+  }
+
+  Stroke.include(PointCollectionMixin);
+
+  Stroke.prototype.defaults = {
+    points: []
+  };
+
+  return Stroke;
+
+})(Model);
+
+module.exports = Stroke;
+
+
+
+},{"./Model.coffee":16,"./mixins/PointCollectionMixin.coffee":21}],20:[function(require,module,exports){
+var Model, PointCollectionMixin, UserStroke,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+PointCollectionMixin = require('./mixins/PointCollectionMixin.coffee');
+
+UserStroke = (function(_super) {
+  __extends(UserStroke, _super);
+
+  function UserStroke() {
+    return UserStroke.__super__.constructor.apply(this, arguments);
+  }
+
+  UserStroke.include(PointCollectionMixin);
+
+  UserStroke.prototype.defaults = {
+    points: []
+  };
+
+  return UserStroke;
+
+})(Model);
+
+module.exports = UserStroke;
+
+
+
+},{"./Model.coffee":16,"./mixins/PointCollectionMixin.coffee":21}],21:[function(require,module,exports){
+var Point, PointCollectionMixin, PointUtils;
+
+Point = require('../Point.coffee');
+
+PointUtils = require('../../utils/PointUtils.coffee');
+
+module.exports = PointCollectionMixin = {
+  getBounds: function() {
+    return PointUtils.getBounds(this.get('points'));
+  }
+};
+
+
+
+},{"../../utils/PointUtils.coffee":24,"../Point.coffee":17}],22:[function(require,module,exports){
+var PointUtils, StrokeCollectionMixin, getStrokeBoundingPoints;
+
+PointUtils = require('../../utils/PointUtils.coffee');
+
+getStrokeBoundingPoints = function(strokes) {
+  var bounds, stroke, strokeBounds, _i, _len;
+  bounds = [];
+  for (_i = 0, _len = strokes.length; _i < _len; _i++) {
+    stroke = strokes[_i];
+    strokeBounds = stroke.getBounds();
+    bounds.push(strokeBounds[0]);
+    bounds.push(strokeBounds[1]);
+  }
+  return bounds;
+};
+
+module.exports = StrokeCollectionMixin = {
+  getBounds: function() {
+    return PointUtils.getBounds(getStrokeBoundingPoints(this.get('strokes')));
+  }
+};
+
+
+
+},{"../../utils/PointUtils.coffee":24}],23:[function(require,module,exports){
+var Mixable, moduleKeywords,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+moduleKeywords = ['extended', 'included'];
+
+Mixable = (function() {
+  function Mixable() {}
+
+  Mixable.extend = function(obj) {
+    var key, value, _ref;
+    for (key in obj) {
+      value = obj[key];
+      if (__indexOf.call(moduleKeywords, key) < 0) {
+        this[key] = value;
+      }
+    }
+    if ((_ref = obj.extended) != null) {
+      _ref.apply(this);
+    }
+    return this;
+  };
+
+  Mixable.include = function(obj) {
+    var key, value, _ref;
+    for (key in obj) {
+      value = obj[key];
+      if (__indexOf.call(moduleKeywords, key) < 0) {
+        this.prototype[key] = value;
+      }
+    }
+    if ((_ref = obj.included) != null) {
+      _ref.apply(this);
+    }
+    return this;
+  };
+
+  return Mixable;
+
+})();
+
+module.exports = Mixable;
+
+
+
+},{}],24:[function(require,module,exports){
+var Point, PointUtils;
+
+Point = require('../models/Point.coffee');
+
+module.exports = PointUtils = {
+  _getExtremes: function(numArray) {
+    var max, min;
+    max = Math.max.apply(null, numArray);
+    min = Math.min.apply(null, numArray);
+    return [max, min];
+  },
+  getExtremeXs: function(points) {
+    var point;
+    return this._getExtremes((function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = points.length; _i < _len; _i++) {
+        point = points[_i];
+        _results.push(point.get('x'));
+      }
+      return _results;
+    })());
+  },
+  getExtremeYs: function(points) {
+    var point;
+    return this._getExtremes((function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = points.length; _i < _len; _i++) {
+        point = points[_i];
+        _results.push(point.get('y'));
+      }
+      return _results;
+    })());
+  },
+  getBounds: function(points) {
+    var maxX, maxY, minX, minY, _ref, _ref1;
+    _ref = PointUtils.getExtremeYs(points), maxY = _ref[0], minY = _ref[1];
+    _ref1 = PointUtils.getExtremeXs(points), maxX = _ref1[0], minX = _ref1[1];
+    return [
+      new Point({
+        x: minX,
+        y: minY
+      }), new Point({
+        x: maxX,
+        y: maxY
+      })
+    ];
+  }
+};
+
+
+
+},{"../models/Point.coffee":17}],25:[function(require,module,exports){
+
+/*
+Constructs recursively an enumeration with value equal to their key, prefixed by their nested levels.
+Use this instead of an array of enums - otherwise Closure Compiler may garble things.
+
+Examples:
+	COLORS = keyReflect("COLORS", {blue: null, red: null})
+	=> COLORS.blue == "COLORS.blue"
+
+	YO = keyReflect({ YO: { YO: null } })
+	==> YO.YO.YO == "YO.YO"
+ */
+var keyReflect,
+  __hasProp = {}.hasOwnProperty;
+
+module.exports = keyReflect = function(prefix, obj) {
+  var key, prefixedKey, ret, value;
+  if (!prefix) {
+    obj = prefix;
+  }
+  if (typeof obj !== 'object') {
+    throw new Error('Must pass in object');
+  }
+  ret = {};
+  for (key in obj) {
+    if (!__hasProp.call(obj, key)) continue;
+    value = obj[key];
+    prefixedKey = "" + prefix + "." + key;
+    ret[key] = value != null ? keyReflect(prefixedKey, value) : prefixedKey;
+  }
+  return ret;
+};
+
+
+
+},{}],26:[function(require,module,exports){
+var CharacterPositionerView, CharacterView, View,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+View = require('./View.coffee');
+
+CharacterView = require('./CharacterView.coffee');
+
+CharacterPositionerView = (function(_super) {
+  __extends(CharacterPositionerView, _super);
+
+  function CharacterPositionerView(container, character, boundsTransformer) {
+    this.character = character;
+    this.boundsTransformer = boundsTransformer;
+    CharacterPositionerView.__super__.constructor.call(this, container);
+    this.group = this.drawSvgElement('group').move(this.boundsTransformer.getXOffset(), this.boundsTransformer.getYOffset()).transform({
+      scaleX: this.boundsTransformer.getScale(),
+      scaleY: this.boundsTransformer.getScale()
+    });
+    this.characterView = this.registerSubview(new CharacterView(this.group, this.character));
+  }
+
+  return CharacterPositionerView;
+
+})(View);
+
+module.exports = CharacterPositionerView;
+
+
+
+},{"./CharacterView.coffee":27,"./View.coffee":30}],27:[function(require,module,exports){
+var CharacterView, ComboStroke, ComboStrokeView, Stroke, StrokeView, View,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+View = require('./View.coffee');
+
+StrokeView = require('./StrokeView.coffee');
+
+ComboStrokeView = require('./ComboStrokeView.coffee');
+
+Stroke = require('../models/Stroke.coffee');
+
+ComboStroke = require('../models/ComboStroke.coffee');
+
+CharacterView = (function(_super) {
+  __extends(CharacterView, _super);
+
+  function CharacterView(container, character) {
+    var stroke, _i, _len, _ref;
+    this.character = character;
+    CharacterView.__super__.constructor.call(this, container);
+    this.strokeViews = [];
+    _ref = this.character.get('strokes');
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      stroke = _ref[_i];
+      if (stroke instanceof Stroke) {
+        this.strokeViews.push(this.registerSubview(new StrokeView(container, stroke)));
+      } else if (stroke instanceof ComboStroke) {
+        this.strokeViews.push(this.registerSubview(new ComboStrokeView(container, stroke)));
+      }
+    }
+  }
+
+  return CharacterView;
+
+})(View);
+
+module.exports = CharacterView;
+
+
+
+},{"../models/ComboStroke.coffee":15,"../models/Stroke.coffee":19,"./ComboStrokeView.coffee":28,"./StrokeView.coffee":29,"./View.coffee":30}],28:[function(require,module,exports){
+var ComboStrokeView, StrokeView, View,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+View = require('./View.coffee');
+
+StrokeView = require('./StrokeView.coffee');
+
+ComboStrokeView = (function(_super) {
+  __extends(ComboStrokeView, _super);
+
+  function ComboStrokeView(container, comboStroke) {
+    var stroke;
+    this.comboStroke = comboStroke;
+    ComboStrokeView.__super__.constructor.call(this, container);
+    this.strokeViews = (function() {
+      var _i, _len, _ref, _results;
+      _ref = this.comboStroke.get('strokes');
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        stroke = _ref[_i];
+        _results.push(this.registerSubview(new StrokeView(container, stroke)));
+      }
+      return _results;
+    }).call(this);
+  }
+
+  return ComboStrokeView;
+
+})(View);
+
+module.exports = ComboStrokeView;
+
+
+
+},{"./StrokeView.coffee":29,"./View.coffee":30}],29:[function(require,module,exports){
+var PathRenderer, StrokeView, View,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+View = require('./View.coffee');
+
+StrokeView = require('./StrokeView.coffee');
+
+PathRenderer = require('../lib/PathRenderer.coffee');
+
+StrokeView = (function(_super) {
+  __extends(StrokeView, _super);
+
+  function StrokeView(container, stroke) {
+    this.stroke = stroke;
+    StrokeView.__super__.constructor.call(this, container);
+    this.pathRenderer = new PathRenderer(this.stroke.get('points'));
+    this.path = this.drawSvgElement('path', this.pathRenderer.getPathString(true));
+  }
+
+  return StrokeView;
+
+})(View);
+
+module.exports = StrokeView;
+
+
+
+},{"../lib/PathRenderer.coffee":12,"./StrokeView.coffee":29,"./View.coffee":30}],30:[function(require,module,exports){
+var View,
+  __slice = [].slice;
+
+View = (function() {
+  function View(container) {
+    this._container = container;
+    this.subviews = [];
+    this.svgElements = [];
+  }
+
+  View.prototype.registerSubview = function(subview) {
+    this.subviews.push(subview);
+    return subview;
+  };
+
+  View.prototype.drawSvgElement = function() {
+    var element, elementArguments, elementName;
+    elementName = arguments[0], elementArguments = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    element = this._container[elementName].apply(this._container, elementArguments);
+    this.svgElements.push(element);
+    return element;
+  };
+
+  View.prototype.destroy = function() {
+    var element, subview, _i, _j, _len, _len1, _ref, _results;
+    _ref = this.svgElements();
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      element = _ref[_i];
+      element.remove();
+    }
+    _results = [];
+    for (_j = 0, _len1 = subviews.length; _j < _len1; _j++) {
+      subview = subviews[_j];
+      _results.push(subview.destroy());
+    }
+    return _results;
+  };
+
+  return View;
+
+})();
+
+module.exports = View;
+
+
+
+},{}]},{},[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]);

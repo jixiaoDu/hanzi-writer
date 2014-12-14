@@ -12,7 +12,7 @@ class ZdtCharacterBuilder
 		for strokeData in rawStrokeData
 			if strokeData.isComplete and comboStrokeDataBuffer.length == 0
 				strokes.push(new Stroke(strokeData))
-			else if stroke.isComplete
+			else if strokeData.isComplete
 				comboStrokeDataBuffer.push(strokeData)
 				partialStrokes = for strokeData in comboStrokeDataBuffer
 					strokeData.animationSpeedup = comboStrokeDataBuffer.length

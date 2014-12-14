@@ -1,5 +1,5 @@
-Model = require('model')
-PointCollectionMixin = require('mixins/PointCollectionMixin.coffee')
+Model = require('./Model.coffee')
+PointCollectionMixin = require('./mixins/PointCollectionMixin.coffee')
 
 
 class Stroke extends Model

@@ -10,8 +10,6 @@ function updateCharacter() {
 		width: 400,
 		height: 400
 	});
-	writer.showHint();
-	writer.showCharacter();
 	isCharVisible = true;
 	isHintVisible = true;
 	window.writer = writer;

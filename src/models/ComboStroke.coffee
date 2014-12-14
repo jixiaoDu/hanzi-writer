@@ -1,5 +1,5 @@
-Model = require('model')
-StrokeCollectionMixin = require('mixins/StrokeCollectionMixin.coffee')
+Model = require('./Model.coffee')
+StrokeCollectionMixin = require('./mixins/StrokeCollectionMixin.coffee')
 
 class ComboStroke extends Model
 

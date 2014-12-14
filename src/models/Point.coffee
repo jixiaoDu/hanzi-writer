@@ -1,4 +1,4 @@
-Model = require('model')
+Model = require('./Model.coffee')
 
 class Point extends Model
 

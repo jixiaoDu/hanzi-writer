@@ -13,3 +13,5 @@ class Model extends Mixable
 		else
 			@properties[arguments[0]] = arguments[1]
 		return @
+
+module.exports = Model
