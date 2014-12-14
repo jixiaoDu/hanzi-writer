@@ -1,6 +1,7 @@
 class View
 
-	constructor: (container) ->
+	constructor: (container, modelsMap) ->
+		@[key] = value for own key, value of modelsMap
 		@_container = container
 		@subviews = []
 		@svgElements = []

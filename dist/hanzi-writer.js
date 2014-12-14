@@ -3893,512 +3893,7 @@
 }));
 
 },{}],2:[function(require,module,exports){
-var Character, ComboStroke, Drawable, Stroke,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Stroke = require('./Stroke.coffee');
-
-ComboStroke = require('./ComboStroke.coffee');
-
-Drawable = require('./Drawable.coffee');
-
-Character = (function(_super) {
-  __extends(Character, _super);
-
-  Character.DISTANCE_THRESHOLD = 30;
-
-  function Character(pathStrings, options) {
-    var comboStrokeBuffer, pathString, rawStrokes, stroke, _i, _len;
-    this.options = options != null ? options : {};
-    this.strokes = [];
-    rawStrokes = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = pathStrings.length; _i < _len; _i++) {
-        pathString = pathStrings[_i];
-        _results.push(new Stroke(pathString, this.options));
-      }
-      return _results;
-    }).call(this);
-    comboStrokeBuffer = [];
-    for (_i = 0, _len = rawStrokes.length; _i < _len; _i++) {
-      stroke = rawStrokes[_i];
-      if (stroke.isComplete && comboStrokeBuffer.length === 0) {
-        this.strokes.push(stroke);
-      } else if (stroke.isComplete) {
-        comboStrokeBuffer.push(stroke);
-        this.strokes.push(new ComboStroke(comboStrokeBuffer, this.options));
-        comboStrokeBuffer = [];
-      } else {
-        comboStrokeBuffer.push(stroke);
-      }
-    }
-  }
-
-  Character.prototype.getBounds = function() {
-    var maxX, maxY, midX, midY, minX, minY, strokeBoundingPoints, _ref, _ref1;
-    strokeBoundingPoints = this.getAllStrokeBounds();
-    _ref = this.getExtremes(this.getAllYs(strokeBoundingPoints)), maxY = _ref[0], midY = _ref[1], minY = _ref[2];
-    _ref1 = this.getExtremes(this.getAllXs(strokeBoundingPoints)), maxX = _ref1[0], midX = _ref1[1], minX = _ref1[2];
-    return [
-      {
-        x: minX,
-        y: minY
-      }, {
-        x: maxX,
-        y: maxY
-      }
-    ];
-  };
-
-  Character.prototype.getAllStrokeBounds = function() {
-    var bounds, stroke, strokeBounds, _i, _len, _ref;
-    bounds = [];
-    _ref = this.strokes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      strokeBounds = stroke.getBounds();
-      bounds.push(strokeBounds[0]);
-      bounds.push(strokeBounds[1]);
-    }
-    return bounds;
-  };
-
-  Character.prototype.getMatchingStroke = function(points) {
-    var avgDist, bestAvgDist, closestStroke, stroke, _i, _len, _ref;
-    closestStroke = null;
-    bestAvgDist = 0;
-    _ref = this.strokes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      avgDist = stroke.getAverageDistance(points);
-      if (avgDist < bestAvgDist || !closestStroke) {
-        closestStroke = stroke;
-        bestAvgDist = avgDist;
-      }
-    }
-    if (bestAvgDist < Character.DISTANCE_THRESHOLD) {
-      return closestStroke;
-    }
-  };
-
-  Character.prototype.show = function(animationOptions) {
-    var stroke, _i, _len, _ref, _results;
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.show(animationOptions));
-    }
-    return _results;
-  };
-
-  Character.prototype.hide = function(animationOptions) {
-    var stroke, _i, _len, _ref, _results;
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.hide(animationOptions));
-    }
-    return _results;
-  };
-
-  Character.prototype.showStroke = function(strokeNum, animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.getStroke(strokeNum).show(animationOptions);
-  };
-
-  Character.prototype.getStroke = function(strokeNum) {
-    return this.strokes[strokeNum];
-  };
-
-  Character.prototype.getNumStrokes = function() {
-    return this.strokes.length;
-  };
-
-  Character.prototype.draw = function() {
-    var stroke, _i, _len, _ref, _results;
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.draw());
-    }
-    return _results;
-  };
-
-  Character.prototype.animate = function(onComplete) {
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-    return this.hide({
-      onComplete: (function(_this) {
-        return function() {
-          return _this.animateStroke(onComplete, 0);
-        };
-      })(this)
-    });
-  };
-
-  Character.prototype.setCanvas = function(canvas) {
-    var stroke, _i, _len, _ref, _results;
-    Character.__super__.setCanvas.apply(this, arguments);
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.setCanvas(canvas));
-    }
-    return _results;
-  };
-
-  Character.prototype.animateStroke = function(onComplete, strokeNum) {
-    var stroke;
-    stroke = this.strokes[strokeNum];
-    return stroke.animate((function(_this) {
-      return function() {
-        var nextStroke;
-        if (strokeNum < _this.strokes.length - 1) {
-          nextStroke = function() {
-            return _this.animateStroke(onComplete, strokeNum + 1);
-          };
-          return setTimeout(nextStroke, _this.options.delayBetweenStrokes);
-        } else {
-          return onComplete();
-        }
-      };
-    })(this));
-  };
-
-  return Character;
-
-})(Drawable);
-
-module.exports = Character;
-
-
-
-},{"./ComboStroke.coffee":4,"./Drawable.coffee":5,"./Stroke.coffee":8}],3:[function(require,module,exports){
-var CharacterPositioner, Drawable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Drawable = require('./Drawable.coffee');
-
-CharacterPositioner = (function(_super) {
-  __extends(CharacterPositioner, _super);
-
-  function CharacterPositioner(character, options) {
-    this.character = character;
-    this.options = options != null ? options : {};
-  }
-
-  CharacterPositioner.prototype.getBounds = function() {
-    return this.character.getBounds();
-  };
-
-  CharacterPositioner.prototype.convertExternalPoints = function(points) {
-    var point, _i, _len, _results;
-    _results = [];
-    for (_i = 0, _len = points.length; _i < _len; _i++) {
-      point = points[_i];
-      _results.push(this.convertExternalPoint(point));
-    }
-    return _results;
-  };
-
-  CharacterPositioner.prototype.convertExternalPoint = function(point) {
-    return {
-      x: (point.x - this.xOffset) / this.scale,
-      y: (point.y - this.yOffset) / this.scale
-    };
-  };
-
-  CharacterPositioner.prototype.getNestedCanvas = function() {
-    this.calculateScaleAndOffset();
-    return this.canvas.group().move(this.xOffset, this.yOffset).transform({
-      scaleX: this.scale,
-      scaleY: this.scale
-    });
-  };
-
-  CharacterPositioner.prototype.calculateScaleAndOffset = function() {
-    var bounds, effectiveHeight, effectiveWidth, preScaledHeight, preScaledWidth, scaleX, scaleY, xCenteringBuffer, yCenteringBuffer;
-    bounds = this.getBounds();
-    preScaledWidth = bounds[1].x - bounds[0].x;
-    preScaledHeight = bounds[1].y - bounds[0].y;
-    effectiveWidth = this.options.width - 2 * this.options.padding;
-    effectiveHeight = this.options.height - 2 * this.options.padding;
-    scaleX = effectiveWidth / preScaledWidth;
-    scaleY = effectiveHeight / preScaledHeight;
-    this.scale = Math.min(scaleX, scaleY);
-    xCenteringBuffer = this.options.padding + (effectiveWidth - this.scale * preScaledWidth) / 2;
-    yCenteringBuffer = this.options.padding + (effectiveHeight - this.scale * preScaledHeight) / 2;
-    this.xOffset = -1 * bounds[0].x * this.scale + xCenteringBuffer;
-    return this.yOffset = -1 * bounds[0].y * this.scale + yCenteringBuffer;
-  };
-
-  CharacterPositioner.prototype.draw = function() {
-    return this.character.draw();
-  };
-
-  CharacterPositioner.prototype.animate = function(svg, onComplete) {
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-    return this.character.animate(onComplete);
-  };
-
-  CharacterPositioner.prototype.setCanvas = function(canvas) {
-    CharacterPositioner.__super__.setCanvas.apply(this, arguments);
-    return this.character.setCanvas(this.getNestedCanvas());
-  };
-
-  return CharacterPositioner;
-
-})(Drawable);
-
-module.exports = CharacterPositioner;
-
-
-
-},{"./Drawable.coffee":5}],4:[function(require,module,exports){
-var ComboStroke, Drawable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Drawable = require('./Drawable.coffee');
-
-ComboStroke = (function(_super) {
-  __extends(ComboStroke, _super);
-
-  function ComboStroke(strokes, options) {
-    var stroke, _i, _len, _ref;
-    this.strokes = strokes;
-    this.options = options != null ? options : {};
-    _ref = this.strokes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      stroke.setAnimationSpeedupRatio(this.strokes.length);
-    }
-  }
-
-  ComboStroke.prototype.show = function(animationOptions) {
-    var stroke, _i, _len, _ref, _results;
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.show(animationOptions));
-    }
-    return _results;
-  };
-
-  ComboStroke.prototype.hide = function(animationOptions) {
-    var stroke, _i, _len, _ref, _results;
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.hide(animationOptions));
-    }
-    return _results;
-  };
-
-  ComboStroke.prototype.draw = function() {
-    var stroke, _i, _len, _ref, _results;
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.draw(this.canvas));
-    }
-    return _results;
-  };
-
-  ComboStroke.prototype.animate = function(onComplete) {
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-    return this.animateStroke(onComplete, 0);
-  };
-
-  ComboStroke.prototype.getDistance = function(point) {
-    var distances, stroke;
-    distances = (function() {
-      var _i, _len, _ref, _results;
-      _ref = this.strokes;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        stroke = _ref[_i];
-        _results.push(stroke.getDistance(point));
-      }
-      return _results;
-    }).call(this);
-    return Math.min.apply(Math, distances);
-  };
-
-  ComboStroke.prototype.getAverageDistance = function(points) {
-    var point, totalDist, _i, _len;
-    totalDist = 0;
-    for (_i = 0, _len = points.length; _i < _len; _i++) {
-      point = points[_i];
-      totalDist += this.getDistance(point);
-    }
-    return totalDist / points.length;
-  };
-
-  ComboStroke.prototype.getBounds = function() {
-    var maxX, maxY, midX, midY, minX, minY, strokeBoundingPoints, _ref, _ref1;
-    strokeBoundingPoints = this.getAllStrokeBounds();
-    _ref = this.getExtremes(this.getAllYs(strokeBoundingPoints)), maxY = _ref[0], midY = _ref[1], minY = _ref[2];
-    _ref1 = this.getExtremes(this.getAllXs(strokeBoundingPoints)), maxX = _ref1[0], midX = _ref1[1], minX = _ref1[2];
-    return [
-      {
-        x: minX,
-        y: minY
-      }, {
-        x: maxX,
-        y: maxY
-      }
-    ];
-  };
-
-  ComboStroke.prototype.getAllStrokeBounds = function() {
-    var bounds, stroke, strokeBounds, _i, _len, _ref;
-    bounds = [];
-    _ref = this.strokes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      strokeBounds = stroke.getBounds();
-      bounds.push(strokeBounds[0]);
-      bounds.push(strokeBounds[1]);
-    }
-    return bounds;
-  };
-
-  ComboStroke.prototype.setCanvas = function(canvas) {
-    var stroke, _i, _len, _ref, _results;
-    ComboStroke.__super__.setCanvas.apply(this, arguments);
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.setCanvas(canvas));
-    }
-    return _results;
-  };
-
-  ComboStroke.prototype.highlight = function() {
-    var stroke, _i, _len, _ref, _results;
-    _ref = this.strokes;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      stroke = _ref[_i];
-      _results.push(stroke.highlight());
-    }
-    return _results;
-  };
-
-  ComboStroke.prototype.animateStroke = function(onComplete, strokeNum) {
-    var stroke;
-    stroke = this.strokes[strokeNum];
-    return stroke.animate((function(_this) {
-      return function() {
-        if (strokeNum < _this.strokes.length - 1) {
-          return _this.animateStroke(onComplete, strokeNum + 1);
-        } else {
-          return onComplete();
-        }
-      };
-    })(this));
-  };
-
-  return ComboStroke;
-
-})(Drawable);
-
-module.exports = ComboStroke;
-
-
-
-},{"./Drawable.coffee":5}],5:[function(require,module,exports){
-var Drawable;
-
-Drawable = (function() {
-  function Drawable() {}
-
-  Drawable.prototype.draw = function() {};
-
-  Drawable.prototype.animate = function(onComplete) {
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-  };
-
-  Drawable.prototype.getBounds = function() {};
-
-  Drawable.prototype.setCanvas = function(canvas) {
-    this.canvas = canvas;
-  };
-
-
-  /* convenience methods for children */
-
-  Drawable.prototype.getExtremes = function(numArray) {
-    var max, mid, min;
-    max = Math.max.apply(null, numArray);
-    min = Math.min.apply(null, numArray);
-    mid = (max + min) / 2;
-    return [max, mid, min];
-  };
-
-  Drawable.prototype.getAllXs = function(points) {
-    var point, _i, _len, _results;
-    _results = [];
-    for (_i = 0, _len = points.length; _i < _len; _i++) {
-      point = points[_i];
-      _results.push(point.x);
-    }
-    return _results;
-  };
-
-  Drawable.prototype.getAllYs = function(points) {
-    var point, _i, _len, _results;
-    _results = [];
-    for (_i = 0, _len = points.length; _i < _len; _i++) {
-      point = points[_i];
-      _results.push(point.y);
-    }
-    return _results;
-  };
-
-  return Drawable;
-
-})();
-
-module.exports = Drawable;
-
-
-
-},{}],6:[function(require,module,exports){
-var BoundsTransformer, CharacterPositionerView, HanziWriter, RenderOptions, SVG, ZdtCharacterBuilder, previousHanziWriter;
+var BoundsTransformer, CharacterPositionerView, HanziWriter, PositionerRenderOptions, SVG, StrokeRenderOptions, ZdtCharacterBuilder, extractKeys, previousHanziWriter;
 
 ZdtCharacterBuilder = require('./lib/ZdtCharacterBuilder.coffee');
 
@@ -4406,41 +3901,86 @@ BoundsTransformer = require('./lib/BoundsTransformer.coffee');
 
 CharacterPositionerView = require('./views/CharacterPositionerView.coffee');
 
-RenderOptions = require('./models/RenderOptions.coffee');
+PositionerRenderOptions = require('./models/PositionerRenderOptions.coffee');
+
+StrokeRenderOptions = require('./models/StrokeRenderOptions.coffee');
+
+extractKeys = require('./utils/extractKeys.coffee');
 
 SVG = require('svg.js');
 
 HanziWriter = (function() {
-  HanziWriter.prototype.options = {
+  HanziWriter.prototype.defaultOptions = {
     charDataLoader: function(char) {
       return hanziData[char];
-    }
+    },
+    width: 400,
+    height: 400,
+    padding: 20,
+    fullStrokeColor: '#555',
+    fullStrokeVisible: true,
+    outlineStrokeColor: '#DDD',
+    outlineStrokeVisible: true,
+    userStrokeColor: '#333'
   };
 
   function HanziWriter(element, character, options) {
-    var key, value;
+    var key, value, _ref;
     if (options == null) {
       options = {};
     }
-    this.svg = SVG(element);
-    for (key in options) {
-      value = options[key];
+    this.options = {};
+    _ref = this.defaultOptions;
+    for (key in _ref) {
+      value = _ref[key];
       this.options[key] = value;
     }
-    this.renderOptions = new RenderOptions({
-      width: options.width || 400,
-      height: options.height || 400,
-      padding: options.padding || 20
-    });
+    this.svg = SVG(element);
+    this.updateOptions(options);
     this.setCharacter(character);
   }
 
   HanziWriter.prototype.setCharacter = function(char) {
     var pathStrings;
+    if (this.characterPositionerView) {
+      this.characterPositionerView.destroy();
+    }
     pathStrings = this.options.charDataLoader(char);
     this.character = (new ZdtCharacterBuilder).buildCharacter(pathStrings);
-    this.boundsTransformer = new BoundsTransformer(this.character.getBounds(), this.renderOptions);
-    return this.characterPositionerView = new CharacterPositionerView(this.svg, this.character, this.boundsTransformer);
+    this.boundsTransformer = new BoundsTransformer(this.character.getBounds(), this.positionerRenderOptions);
+    return this.characterPositionerView = new CharacterPositionerView(this.svg, {
+      character: this.character,
+      boundsTransformer: this.boundsTransformer,
+      fullStrokeRenderOptions: this.fullStrokeRenderOptions,
+      outlineStrokeRenderOptions: this.outlineStrokeRenderOptions
+    });
+  };
+
+  HanziWriter.prototype.updateOptions = function(options) {
+    var key, value;
+    for (key in options) {
+      value = options[key];
+      this.options[key] = value;
+    }
+    this.positionerRenderOptions = new PositionerRenderOptions(extractKeys(this.options, ['width', 'height', 'padding']));
+    this.fullStrokeRenderOptions = new StrokeRenderOptions({
+      color: this.options.fullStrokeColor,
+      fill: this.options.fullStrokeColor,
+      visible: this.options.fullStrokeVisible,
+      pathWidth: 2
+    });
+    this.outlineStrokeRenderOptions = new StrokeRenderOptions({
+      color: this.options.outlineStrokeColor,
+      fill: this.options.outlineStrokeColor,
+      visible: this.options.outlineStrokeVisible,
+      pathWidth: 2
+    });
+    return this.userStrokeRenderOptions = new StrokeRenderOptions({
+      color: this.options.userStrokeColor,
+      fill: 'none',
+      visible: true,
+      pathWidth: 4
+    });
   };
 
   return HanziWriter;
@@ -4462,322 +4002,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
 
-},{"./lib/BoundsTransformer.coffee":11,"./lib/ZdtCharacterBuilder.coffee":13,"./models/RenderOptions.coffee":18,"./views/CharacterPositionerView.coffee":26,"svg.js":1}],7:[function(require,module,exports){
-var Drawable, Path,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Drawable = require('./Drawable.coffee');
-
-Path = (function(_super) {
-  __extends(Path, _super);
-
-  function Path() {
-    return Path.__super__.constructor.apply(this, arguments);
-  }
-
-  Path.prototype.getPathString = function() {
-    var pathString, point, remainingPoints, start, _i, _len;
-    start = this.points[0];
-    remainingPoints = this.points.slice(1);
-    pathString = "M " + start.x + " " + start.y;
-    for (_i = 0, _len = remainingPoints.length; _i < _len; _i++) {
-      point = remainingPoints[_i];
-      pathString += " L " + point.x + " " + point.y;
-    }
-    return pathString;
-  };
-
-  Path.prototype.drawPath = function() {
-    return this.path = this.canvas.path(this.getPathString());
-  };
-
-  Path.prototype.getPoints = function() {
-    return this.points;
-  };
-
-  Path.prototype.getBounds = function() {
-    var maxX, maxY, midX, midY, minX, minY, _ref, _ref1;
-    _ref = this.getExtremes(this.getAllYs(this.points)), maxY = _ref[0], midY = _ref[1], minY = _ref[2];
-    _ref1 = this.getExtremes(this.getAllXs(this.points)), maxX = _ref1[0], midX = _ref1[1], minX = _ref1[2];
-    return [
-      {
-        x: minX,
-        y: minY
-      }, {
-        x: maxX,
-        y: maxY
-      }
-    ];
-  };
-
-  Path.prototype.draw = function() {
-    return this.drawPath();
-  };
-
-  return Path;
-
-})(Drawable);
-
-module.exports = Path;
-
-
-
-},{"./Drawable.coffee":5}],8:[function(require,module,exports){
-var Path, Stroke,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Path = require('./Path.coffee');
-
-Stroke = (function(_super) {
-  __extends(Stroke, _super);
-
-  Stroke.HORIZONTAL_STROKE = 1;
-
-  Stroke.BACK_SLASH_STROKE = 2;
-
-  Stroke.VERTICAL_STROKE = 3;
-
-  Stroke.FORWARD_SLASH_STROKE = 4;
-
-  Stroke.REVERSE_HORIZONTAL_STROKE = 5;
-
-  Stroke.REVERSE_BACK_SLASH_STROKE = 6;
-
-  Stroke.REVERSE_VERTICAL_STROKE = 7;
-
-  Stroke.REVERSE_FORWARD_SLASH_STROKE = 8;
-
-  function Stroke(zdtPathData, options) {
-    var metadataString, pathString, pointString, _ref;
-    this.options = options != null ? options : {};
-    _ref = zdtPathData.split(':'), metadataString = _ref[0], pathString = _ref[1];
-    pathString = pathString.replace(/;?\s*$/, '');
-    this.points = (function() {
-      var _i, _len, _ref1, _results;
-      _ref1 = pathString.split(';');
-      _results = [];
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        pointString = _ref1[_i];
-        _results.push(this.parsePoint(pointString));
-      }
-      return _results;
-    }).call(this);
-    this.isComplete = metadataString[2] === 'P';
-    this.strokeType = parseInt(metadataString[1]);
-    this.animationSpeedupRatio = 1;
-  }
-
-  Stroke.prototype.getPathString = function() {
-    return Stroke.__super__.getPathString.apply(this, arguments) + ' z';
-  };
-
-  Stroke.prototype.parsePoint = function(pointString) {
-    var pointArr;
-    pointArr = pointString.split(',');
-    return {
-      x: pointArr[0],
-      y: pointArr[1]
-    };
-  };
-
-  Stroke.prototype.setAnimationSpeedupRatio = function(animationSpeedupRatio) {
-    this.animationSpeedupRatio = animationSpeedupRatio;
-  };
-
-  Stroke.prototype.getDistance = function(point) {
-    var dx, dy, end, length, start;
-    start = this.getStrokeAnimationStartingPoint();
-    end = this.getStrokeAnimationEndingPoint();
-    dx = end.x - start.x;
-    dy = end.y - start.y;
-    length = this.getStrokeAnimationDistance();
-    return Math.abs(dy * point.x - dx * point.y - start.x * end.y + start.y * end.x) / length;
-  };
-
-  Stroke.prototype.getAverageDistance = function(points) {
-    var point, totalDist, _i, _len;
-    totalDist = 0;
-    for (_i = 0, _len = points.length; _i < _len; _i++) {
-      point = points[_i];
-      totalDist += this.getDistance(point);
-    }
-    return totalDist / points.length;
-  };
-
-  Stroke.prototype.getStrokeAnimationStartingPoint = function() {
-    return this.getStrokeAnimationExtremePoint(this.strokeType, false);
-  };
-
-  Stroke.prototype.getStrokeAnimationEndingPoint = function() {
-    return this.getStrokeAnimationExtremePoint(this.strokeType, true);
-  };
-
-  Stroke.prototype.getStrokeAnimationExtremePoint = function(strokeType, isReverse) {
-    var extremeXs, extremeYs, maxIndex, midIndex, minIndex;
-    extremeYs = this.getExtremes(this.getAllYs(this.points));
-    extremeXs = this.getExtremes(this.getAllXs(this.points));
-    if (strokeType > Stroke.FORWARD_SLASH_STROKE) {
-      strokeType = strokeType - Stroke.FORWARD_SLASH_STROKE;
-      isReverse = !isReverse;
-    }
-    minIndex = isReverse ? 0 : 2;
-    maxIndex = isReverse ? 2 : 0;
-    midIndex = 1;
-    switch (strokeType) {
-      case Stroke.HORIZONTAL_STROKE:
-        return {
-          x: extremeXs[minIndex],
-          y: extremeYs[midIndex]
-        };
-      case Stroke.BACK_SLASH_STROKE:
-        return {
-          x: extremeXs[minIndex],
-          y: extremeYs[minIndex]
-        };
-      case Stroke.VERTICAL_STROKE:
-        return {
-          x: extremeXs[midIndex],
-          y: extremeYs[minIndex]
-        };
-      case Stroke.FORWARD_SLASH_STROKE:
-        return {
-          x: extremeXs[maxIndex],
-          y: extremeYs[minIndex]
-        };
-    }
-  };
-
-  Stroke.prototype.getStrokeAnimationDistance = function() {
-    var end, start;
-    start = this.getStrokeAnimationStartingPoint();
-    end = this.getStrokeAnimationEndingPoint();
-    return Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
-  };
-
-  Stroke.prototype.markAnimationPoints = function() {
-    var end, start;
-    start = this.getStrokeAnimationStartingPoint();
-    end = this.getStrokeAnimationEndingPoint();
-    this.canvas.circle(10).attr({
-      fill: '#9F9'
-    }).move(start.x, start.y);
-    return this.canvas.circle(10).attr({
-      fill: '#9F9'
-    }).move(end.x, end.y);
-  };
-
-  Stroke.prototype.highlight = function() {
-    return this.path.animate(this.options.strokeHighlightDuration).attr({
-      fill: this.options.strokeHighlightColor,
-      stroke: this.options.strokeHighlightColor,
-      opacity: 1
-    }).after((function(_this) {
-      return function() {
-        return _this.path.animate(_this.options.strokeHighlightDuration).attr({
-          opacity: 0
-        }).after(function() {
-          return _this.path.attr(_this.options.strokeAttrs);
-        });
-      };
-    })(this));
-  };
-
-  Stroke.prototype.draw = function() {
-    return Stroke.__super__.draw.apply(this, arguments).attr(this.options.strokeAttrs).attr({
-      opacity: 0
-    });
-  };
-
-  Stroke.prototype.show = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.path.animate(animationOptions.duration || 300).opacity(1).after(animationOptions.onComplete || function() {});
-  };
-
-  Stroke.prototype.hide = function(animationOptions) {
-    if (animationOptions == null) {
-      animationOptions = {};
-    }
-    return this.path.animate(animationOptions.duration || 300).opacity(0).after(animationOptions.onComplete || function() {});
-  };
-
-  Stroke.prototype.animate = function(onComplete) {
-    var mask, start;
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-    start = this.getStrokeAnimationStartingPoint();
-    mask = this.canvas.circle(0).center(start.x, start.y);
-    if (!this.path) {
-      this.drawPath();
-    }
-    this.path.attr({
-      opacity: 1
-    }).attr(this.options.strokeAttrs).clipWith(mask);
-    return mask.animate(this.options.strokeAnimationDuration / this.animationSpeedupRatio).radius(this.getStrokeAnimationDistance()).after(onComplete);
-  };
-
-  return Stroke;
-
-})(Path);
-
-module.exports = Stroke;
-
-
-
-},{"./Path.coffee":7}],9:[function(require,module,exports){
-var Path, UserStroke,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Path = require('./Path.coffee');
-
-UserStroke = (function(_super) {
-  __extends(UserStroke, _super);
-
-  function UserStroke(startingPoint, options) {
-    this.options = options != null ? options : {};
-    this.points = [startingPoint];
-  }
-
-  UserStroke.prototype.appendPoint = function(point) {
-    this.points.push(point);
-    return this.path.plot(this.getPathString());
-  };
-
-  UserStroke.prototype.animate = function(onComplete) {
-    if (onComplete == null) {
-      onComplete = function() {};
-    }
-    return onComplete();
-  };
-
-  UserStroke.prototype.draw = function() {
-    return UserStroke.__super__.draw.apply(this, arguments).attr(this.options.userStrokeAttrs);
-  };
-
-  UserStroke.prototype.fadeAndRemove = function() {
-    return this.path.animate(this.options.userStrokeFadeDuration).attr({
-      opacity: 0
-    }).after((function(_this) {
-      return function() {
-        return _this.path.remove();
-      };
-    })(this));
-  };
-
-  return UserStroke;
-
-})(Path);
-
-module.exports = UserStroke;
-
-
-
-},{"./Path.coffee":7}],10:[function(require,module,exports){
+},{"./lib/BoundsTransformer.coffee":4,"./lib/ZdtCharacterBuilder.coffee":6,"./models/PositionerRenderOptions.coffee":11,"./models/StrokeRenderOptions.coffee":13,"./utils/extractKeys.coffee":19,"./views/CharacterPositionerView.coffee":21,"svg.js":1}],3:[function(require,module,exports){
 var StrokeConstants;
 
 module.exports = StrokeConstants = {
@@ -4793,7 +4018,7 @@ module.exports = StrokeConstants = {
 
 
 
-},{}],11:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var BoundsTransformer;
 
 BoundsTransformer = (function() {
@@ -4855,7 +4080,7 @@ module.exports = BoundsTransformer;
 
 
 
-},{}],12:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var PathRenderer;
 
 PathRenderer = (function() {
@@ -4889,7 +4114,7 @@ module.exports = PathRenderer;
 
 
 
-},{}],13:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var Character, ComboStroke, Point, Stroke, ZdtCharacterBuilder;
 
 Point = require('../models/Point.coffee');
@@ -4985,7 +4210,7 @@ module.exports = ZdtCharacterBuilder;
 
 
 
-},{"../models/Character.coffee":14,"../models/ComboStroke.coffee":15,"../models/Point.coffee":17,"../models/Stroke.coffee":19}],14:[function(require,module,exports){
+},{"../models/Character.coffee":7,"../models/ComboStroke.coffee":8,"../models/Point.coffee":10,"../models/Stroke.coffee":12}],7:[function(require,module,exports){
 var Character, Model, StrokeCollectionMixin,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5017,7 +4242,7 @@ module.exports = Character;
 
 
 
-},{"./Model.coffee":16,"./mixins/StrokeCollectionMixin.coffee":22}],15:[function(require,module,exports){
+},{"./Model.coffee":9,"./mixins/StrokeCollectionMixin.coffee":16}],8:[function(require,module,exports){
 var ComboStroke, Model, StrokeCollectionMixin,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5047,7 +4272,7 @@ module.exports = ComboStroke;
 
 
 
-},{"./Model.coffee":16,"./mixins/StrokeCollectionMixin.coffee":22}],16:[function(require,module,exports){
+},{"./Model.coffee":9,"./mixins/StrokeCollectionMixin.coffee":16}],9:[function(require,module,exports){
 var Mixable, Model,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5093,7 +4318,7 @@ module.exports = Model;
 
 
 
-},{"../utils/Mixable.coffee":23}],17:[function(require,module,exports){
+},{"../utils/Mixable.coffee":17}],10:[function(require,module,exports){
 var Model, Point,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5120,35 +4345,35 @@ module.exports = Point;
 
 
 
-},{"./Model.coffee":16}],18:[function(require,module,exports){
-var Model, RenderOptions,
+},{"./Model.coffee":9}],11:[function(require,module,exports){
+var Model, PositionerRenderOptions,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Model = require('./Model.coffee');
 
-RenderOptions = (function(_super) {
-  __extends(RenderOptions, _super);
+PositionerRenderOptions = (function(_super) {
+  __extends(PositionerRenderOptions, _super);
 
-  function RenderOptions() {
-    return RenderOptions.__super__.constructor.apply(this, arguments);
+  function PositionerRenderOptions() {
+    return PositionerRenderOptions.__super__.constructor.apply(this, arguments);
   }
 
-  RenderOptions.prototype.defaults = {
+  PositionerRenderOptions.prototype.defaults = {
     width: 400,
     height: 400,
     padding: 20
   };
 
-  return RenderOptions;
+  return PositionerRenderOptions;
 
 })(Model);
 
-module.exports = RenderOptions;
+module.exports = PositionerRenderOptions;
 
 
 
-},{"./Model.coffee":16}],19:[function(require,module,exports){
+},{"./Model.coffee":9}],12:[function(require,module,exports){
 var Model, PointCollectionMixin, Stroke,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5178,7 +4403,36 @@ module.exports = Stroke;
 
 
 
-},{"./Model.coffee":16,"./mixins/PointCollectionMixin.coffee":21}],20:[function(require,module,exports){
+},{"./Model.coffee":9,"./mixins/PointCollectionMixin.coffee":15}],13:[function(require,module,exports){
+var Model, StrokeRenderOptions,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Model = require('./Model.coffee');
+
+StrokeRenderOptions = (function(_super) {
+  __extends(StrokeRenderOptions, _super);
+
+  function StrokeRenderOptions() {
+    return StrokeRenderOptions.__super__.constructor.apply(this, arguments);
+  }
+
+  StrokeRenderOptions.prototype.defaults = {
+    color: '#555',
+    fill: '#555',
+    visible: true,
+    pathWidth: 4
+  };
+
+  return StrokeRenderOptions;
+
+})(Model);
+
+module.exports = StrokeRenderOptions;
+
+
+
+},{"./Model.coffee":9}],14:[function(require,module,exports){
 var Model, PointCollectionMixin, UserStroke,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5208,7 +4462,7 @@ module.exports = UserStroke;
 
 
 
-},{"./Model.coffee":16,"./mixins/PointCollectionMixin.coffee":21}],21:[function(require,module,exports){
+},{"./Model.coffee":9,"./mixins/PointCollectionMixin.coffee":15}],15:[function(require,module,exports){
 var Point, PointCollectionMixin, PointUtils;
 
 Point = require('../Point.coffee');
@@ -5223,7 +4477,7 @@ module.exports = PointCollectionMixin = {
 
 
 
-},{"../../utils/PointUtils.coffee":24,"../Point.coffee":17}],22:[function(require,module,exports){
+},{"../../utils/PointUtils.coffee":18,"../Point.coffee":10}],16:[function(require,module,exports){
 var PointUtils, StrokeCollectionMixin, getStrokeBoundingPoints;
 
 PointUtils = require('../../utils/PointUtils.coffee');
@@ -5248,7 +4502,7 @@ module.exports = StrokeCollectionMixin = {
 
 
 
-},{"../../utils/PointUtils.coffee":24}],23:[function(require,module,exports){
+},{"../../utils/PointUtils.coffee":18}],17:[function(require,module,exports){
 var Mixable, moduleKeywords,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -5293,7 +4547,7 @@ module.exports = Mixable;
 
 
 
-},{}],24:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var Point, PointUtils;
 
 Point = require('../models/Point.coffee');
@@ -5347,7 +4601,22 @@ module.exports = PointUtils = {
 
 
 
-},{"../models/Point.coffee":17}],25:[function(require,module,exports){
+},{"../models/Point.coffee":10}],19:[function(require,module,exports){
+var extractKeys;
+
+module.exports = extractKeys = function(obj, keys) {
+  var key, newObj, _i, _len;
+  newObj = {};
+  for (_i = 0, _len = keys.length; _i < _len; _i++) {
+    key = keys[_i];
+    newObj[key] = obj[key];
+  }
+  return newObj;
+};
+
+
+
+},{}],20:[function(require,module,exports){
 
 /*
 Constructs recursively an enumeration with value equal to their key, prefixed by their nested levels.
@@ -5383,7 +4652,7 @@ module.exports = keyReflect = function(prefix, obj) {
 
 
 
-},{}],26:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var CharacterPositionerView, CharacterView, View,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5395,15 +4664,17 @@ CharacterView = require('./CharacterView.coffee');
 CharacterPositionerView = (function(_super) {
   __extends(CharacterPositionerView, _super);
 
-  function CharacterPositionerView(container, character, boundsTransformer) {
-    this.character = character;
-    this.boundsTransformer = boundsTransformer;
-    CharacterPositionerView.__super__.constructor.call(this, container);
+  function CharacterPositionerView(container, modelsMap) {
+    CharacterPositionerView.__super__.constructor.apply(this, arguments);
     this.group = this.drawSvgElement('group').move(this.boundsTransformer.getXOffset(), this.boundsTransformer.getYOffset()).transform({
       scaleX: this.boundsTransformer.getScale(),
       scaleY: this.boundsTransformer.getScale()
     });
-    this.characterView = this.registerSubview(new CharacterView(this.group, this.character));
+    this.characterView = this.registerSubview(new CharacterView(this.group, {
+      character: this.character,
+      fullStrokeRenderOptions: this.fullStrokeRenderOptions,
+      outlineStrokeRenderOptions: this.outlineStrokeRenderOptions
+    }));
   }
 
   return CharacterPositionerView;
@@ -5414,7 +4685,7 @@ module.exports = CharacterPositionerView;
 
 
 
-},{"./CharacterView.coffee":27,"./View.coffee":30}],27:[function(require,module,exports){
+},{"./CharacterView.coffee":22,"./View.coffee":25}],22:[function(require,module,exports){
 var CharacterView, ComboStroke, ComboStrokeView, Stroke, StrokeView, View,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5432,18 +4703,23 @@ ComboStroke = require('../models/ComboStroke.coffee');
 CharacterView = (function(_super) {
   __extends(CharacterView, _super);
 
-  function CharacterView(container, character) {
+  function CharacterView(container, modelsMap) {
     var stroke, _i, _len, _ref;
-    this.character = character;
-    CharacterView.__super__.constructor.call(this, container);
+    CharacterView.__super__.constructor.apply(this, arguments);
     this.strokeViews = [];
     _ref = this.character.get('strokes');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       stroke = _ref[_i];
       if (stroke instanceof Stroke) {
-        this.strokeViews.push(this.registerSubview(new StrokeView(container, stroke)));
+        this.strokeViews.push(this.registerSubview(new StrokeView(container, {
+          stroke: stroke,
+          strokeRenderOptions: this.fullStrokeRenderOptions
+        })));
       } else if (stroke instanceof ComboStroke) {
-        this.strokeViews.push(this.registerSubview(new ComboStrokeView(container, stroke)));
+        this.strokeViews.push(this.registerSubview(new ComboStrokeView(container, {
+          comboStroke: stroke,
+          strokeRenderOptions: this.fullStrokeRenderOptions
+        })));
       }
     }
   }
@@ -5456,7 +4732,7 @@ module.exports = CharacterView;
 
 
 
-},{"../models/ComboStroke.coffee":15,"../models/Stroke.coffee":19,"./ComboStrokeView.coffee":28,"./StrokeView.coffee":29,"./View.coffee":30}],28:[function(require,module,exports){
+},{"../models/ComboStroke.coffee":8,"../models/Stroke.coffee":12,"./ComboStrokeView.coffee":23,"./StrokeView.coffee":24,"./View.coffee":25}],23:[function(require,module,exports){
 var ComboStrokeView, StrokeView, View,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5468,17 +4744,19 @@ StrokeView = require('./StrokeView.coffee');
 ComboStrokeView = (function(_super) {
   __extends(ComboStrokeView, _super);
 
-  function ComboStrokeView(container, comboStroke) {
+  function ComboStrokeView(container, modelsMap) {
     var stroke;
-    this.comboStroke = comboStroke;
-    ComboStrokeView.__super__.constructor.call(this, container);
+    ComboStrokeView.__super__.constructor.apply(this, arguments);
     this.strokeViews = (function() {
       var _i, _len, _ref, _results;
       _ref = this.comboStroke.get('strokes');
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         stroke = _ref[_i];
-        _results.push(this.registerSubview(new StrokeView(container, stroke)));
+        _results.push(this.registerSubview(new StrokeView(container, {
+          stroke: stroke,
+          strokeRenderOptions: this.strokeRenderOptions
+        })));
       }
       return _results;
     }).call(this);
@@ -5492,7 +4770,7 @@ module.exports = ComboStrokeView;
 
 
 
-},{"./StrokeView.coffee":29,"./View.coffee":30}],29:[function(require,module,exports){
+},{"./StrokeView.coffee":24,"./View.coffee":25}],24:[function(require,module,exports){
 var PathRenderer, StrokeView, View,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -5506,12 +4784,20 @@ PathRenderer = require('../lib/PathRenderer.coffee');
 StrokeView = (function(_super) {
   __extends(StrokeView, _super);
 
-  function StrokeView(container, stroke) {
-    this.stroke = stroke;
-    StrokeView.__super__.constructor.call(this, container);
+  function StrokeView(container, modelsMap) {
+    StrokeView.__super__.constructor.apply(this, arguments);
     this.pathRenderer = new PathRenderer(this.stroke.get('points'));
-    this.path = this.drawSvgElement('path', this.pathRenderer.getPathString(true));
+    this.path = this.drawSvgElement('path', this.pathRenderer.getPathString(true)).attr(this._getStrokeSvgAttrs());
   }
+
+  StrokeView.prototype._getStrokeSvgAttrs = function() {
+    return {
+      stroke: this.strokeRenderOptions.get('color'),
+      fill: this.strokeRenderOptions.get('fill'),
+      opacity: this.strokeRenderOptions.get('visible') ? 1 : 0,
+      'stroke-width': this.strokeRenderOptions.get('pathWidth')
+    };
+  };
 
   return StrokeView;
 
@@ -5521,12 +4807,19 @@ module.exports = StrokeView;
 
 
 
-},{"../lib/PathRenderer.coffee":12,"./StrokeView.coffee":29,"./View.coffee":30}],30:[function(require,module,exports){
+},{"../lib/PathRenderer.coffee":5,"./StrokeView.coffee":24,"./View.coffee":25}],25:[function(require,module,exports){
 var View,
+  __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
 
 View = (function() {
-  function View(container) {
+  function View(container, modelsMap) {
+    var key, value;
+    for (key in modelsMap) {
+      if (!__hasProp.call(modelsMap, key)) continue;
+      value = modelsMap[key];
+      this[key] = value;
+    }
     this._container = container;
     this.subviews = [];
     this.svgElements = [];
@@ -5568,4 +4861,4 @@ module.exports = View;
 
 
 
-},{}]},{},[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]);
+},{}]},{},[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]);
